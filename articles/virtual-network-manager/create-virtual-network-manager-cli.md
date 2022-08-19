@@ -228,15 +228,14 @@ az policy definition create \
     --mode "Microsoft.Network.Data"
 ```
 
-Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `--subscription "/subscriptions/{subId}"`.
+Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--scope "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `--scope "/subscriptions/{subId}"`.
 
 ```azurecli-interactive
 az policy assignment create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
-    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Red\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
-    --management-group "/providers/Microsoft.Management/managementGroups/{mg}" \
-    --mode "Microsoft.Network.Data"
+    --scope "/providers/Microsoft.Management/managementGroups/{mg}" \
+    --policy "/providers/Microsoft.Management/managementGroups/{mg}/providers/Microsoft.Authorization/policyDefinitions/takeRedVNets"
 ```
 
 ## Create a configuration
@@ -249,11 +248,10 @@ Create a mesh network topology configuration with [az network manager connect-co
 az network manager connect-config create \
     --configuration-name "connectivityconfig" \
     --description "CLI Mesh Connectivity Config Example" \
-    --applies-to-groups network-group-id="/subscriptions/{manager_subscription_id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/networkGroups/myNetworkGroup" \
+    --applies-to-groups network-group-id="/subscriptions/{manager_subscription_id}/resourceGroups/{managerAVNMResourceGroup}/providers/Microsoft.Network/networkManagers/myAVNM/networkGroups/myNetworkGroup" \
     --connectivity-topology "Mesh" \
-    --delete-existing-peering true \
     --network-manager-name "myAVNM" \
-    --resource-group "myAVNMResourceGroup"
+    --resource-group "managerAVNMResourceGroup"
 ```
 
 ## Commit deployment
@@ -264,9 +262,9 @@ Commit the configuration to the target regions with with [az network manager pos
 az network manager post-commit \
     --network-manager-name "myAVNM" \
     --commit-type "Connectivity" \
-    --configuration-ids "/subscriptions/{subscriptionId}/resourceGroups/myANVMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/connectivityConfigurations/connectivityconfig" \
+    --configuration-ids "/subscriptions/{manager_subscription_id}/resourceGroups/myANVMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/connectivityConfigurations/connectivityconfig" \
     --target-locations "westus" \
-    --resource-group "myAVNMResourceGroup"
+    --resource-group "managerAVNMResourceGroup"
 ```
 
 ## Verify that the configurations have been deployed as intended.
@@ -275,7 +273,7 @@ Only the subscription owning the Virtual Networks can verify that configurations
 
 ```azurecli-interactive
 az account set \
-    --subscription "<target subscription ID>"
+    --subscription "{target subscription ID}"
 ```
 
 Virtual Networks will display configurations applied to them with [az network manager list-effective-connectivity-config](/cli/azure/network/manager#az-network-manager-list-effective-connectivity-config):
@@ -319,7 +317,7 @@ Ensure you're using the subscription that owns your network manager.
 
 ```azurecli-interactive
 az account set \
-    --subscription "<manager subscription ID>"
+    --subscription "{manager subscription ID}"
 ```
 
 1. Remove the connectivity deployment by committing no configurations with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit):
@@ -398,10 +396,10 @@ az network vnet delete \
 
 1. If you no longer need any resources under the resource group the virtual networks belongs to, delete it with [az group delete](/cli/azure/group#az-group-delete):
 
-    ```azurecli-interactive
-    az group delete \
-        --name "targetAVNMResourceGroup"
-    ```
+```azurecli-interactive
+az group delete \
+    --name "targetAVNMResourceGroup"
+```
 
 ## Next steps
 
