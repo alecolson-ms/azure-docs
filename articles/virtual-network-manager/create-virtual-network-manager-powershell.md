@@ -67,49 +67,49 @@ New-AzResourceGroup @rg
 
 Define the scope and access type this Network Manager instance will have. Virtual Network Managers can manage **management groups** (which can contain other management groups, and many subscriptions under them)) **subscriptions**, or a combination of both. Replace {mgName} and {subId} with any management groups or subscriptions you want to manage virtual networks under.
 
-    ```azurepowershell-interactive
-    
-    Import-Module -Name Az.Network -RequiredVersion "4.15.1"
-    
-    [System.Collections.Generic.List[string]]$subGroup = @()  
-    $subGroup.Add("/subscriptions/{subId}")
-    [System.Collections.Generic.List[string]]$mgGroup = @()  
-    $mgGroup.Add("/providers/Microsoft.Management/managementGroups/{mgName}")
-    
-    [System.Collections.Generic.List[String]]$access = @()  
-    $access.Add("Connectivity");  
-    $access.Add("SecurityAdmin"); 
-    
-    $scope = New-AzNetworkManagerScope -Subscription $subGroup -ManagementGroup $mgGroup
-    
-    ```
+```azurepowershell-interactive
+
+Import-Module -Name Az.Network -RequiredVersion "4.15.1"
+
+[System.Collections.Generic.List[string]]$subGroup = @()  
+$subGroup.Add("/subscriptions/{subId}")
+[System.Collections.Generic.List[string]]$mgGroup = @()  
+$mgGroup.Add("/providers/Microsoft.Management/managementGroups/{mgName}")
+
+[System.Collections.Generic.List[String]]$access = @()  
+$access.Add("Connectivity");  
+$access.Add("SecurityAdmin"); 
+
+$scope = New-AzNetworkManagerScope -Subscription $subGroup -ManagementGroup $mgGroup
+
+```
 
 1. Create the Virtual Network Manager with New-AzNetworkManager. This example creates an Azure Virtual Network Manager named **myAVNM** in the West US location.
     
-    ```azurepowershell-interactive
-    $avnm = @{
-        Name = 'myAVNM'
-        ResourceGroupName = $rg.Name
-        NetworkManagerScope = $scope
-        NetworkManagerScopeAccess = $access
-        Location = $location
-    }
-    $networkmanager = New-AzNetworkManager @avnm
-    ```
+```azurepowershell-interactive
+$avnm = @{
+Name = 'myAVNM'
+ResourceGroupName = $rg.Name
+NetworkManagerScope = $scope
+NetworkManagerScopeAccess = $access
+Location = $location
+}
+$networkmanager = New-AzNetworkManager @avnm
+```
 
 ## Create a Network Group
 
 Virtual Network Manager applies configurations to groups of VNets by placing them in **Network Groups.** Create a Network Group with New-AzNetworkManagerGroup.
 
-    ```azurepowershell-interactive
-        $ng = @{
-            Name = 'myNetworkGroup'
-            ResourceGroupName = $rg.Name
-            NetworkManagerName = $networkManager.Name
-	    MemberType = 'Microsoft.Network/VirtualNetworks'
-        }
-        $networkgroup = New-AzNetworkManagerGroup @ng
-    ```
+```azurepowershell-interactive
+$ng = @{
+    Name = 'myNetworkGroup'
+    ResourceGroupName = $rg.Name
+    NetworkManagerName = $networkManager.Name
+    MemberType = 'Microsoft.Network/VirtualNetworks'
+}
+$networkgroup = New-AzNetworkManagerGroup @ng
+```
     
 ## Create Virtual Networks to be managed by your Network Manager.
 
@@ -229,49 +229,50 @@ Switch back to the subscription owning your Network Manager.
 SetAzContext --subscription "{manager subscription ID}"
 ```
     
-1. Add the static member to the network group with the following commands:
-    1. Static members must have a network group scoped unique name. It's recommended to use a consistent hash of the virtual network ID. Below is an approach using the ARM Templates uniqueString() implementation.
+Add these static members to the Network Group. 
+> [!NOTE]
+> Static members must have a network group scoped unique name. It's recommended to use a consistent hash of the virtual network ID. Below is an approach using the ARM Templates uniqueString() implementation.
    
-    ```azurepowershell-interactive
-        function Get-UniqueString ([string]$id, $length=13)
-        {
-        $Array = (new-object System.Security.Cryptography.SHA512Managed).ComputeHash($id.ToCharArray())
-        -join ($hashArray[1..$length] | ForEach-Object { [char]($_ % 26 + [byte][char]'a') })
-        }
-    ```
+```azurepowershell-interactive
+function Get-UniqueString ([string]$id, $length=13)
+{
+$Array = (new-object System.Security.Cryptography.SHA512Managed).ComputeHash($id.ToCharArray())
+-join ($hashArray[1..$length] | ForEach-Object { [char]($_ % 26 + [byte][char]'a') })
+}
+```
        
-    ```azurepowershell-interactive
-    $smA = @{
-            Name = Get-UniqueString $virtualNetworkA.Id
-            ResourceGroupName = $rg.Name
-            NetworkGroupName = $networkGroup.Name
-            NetworkManagerName = $networkManager.Name
-            ResourceId = $virtualNetworkA.Id
-        }
-        $statimemberA = New-AzNetworkManagerStaticMember @sm
-    ```
+```azurepowershell-interactive
+$smA = @{
+    Name = Get-UniqueString $virtualNetworkA.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkA.Id
+}
+$statimemberA = New-AzNetworkManagerStaticMember @sm
+```
         
-    ```azurepowershell-interactive
-    $smB = @{
-            Name = Get-UniqueString $virtualNetworkB.Id
-            ResourceGroupName = $rg.Name
-            NetworkGroupName = $networkGroup.Name
-            NetworkManagerName = $networkManager.Name
-            ResourceId = $virtualNetworkB.Id
-        }
-        $statimemberB = New-AzNetworkManagerStaticMember @sm
-    ```
+```azurepowershell-interactive
+$smB = @{
+    Name = Get-UniqueString $virtualNetworkB.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkB.Id
+}
+$statimemberB = New-AzNetworkManagerStaticMember @sm
+```
     
-    ```azurepowershell-interactive
-    $smC = @{
-            Name = Get-UniqueString $virtualNetworkC.Id
-            ResourceGroupName = $rg.Name
-            NetworkGroupName = $networkGroup.Name
-            NetworkManagerName = $networkManager.Name
-            ResourceId = $virtualNetworkC.Id
-        }
-        $statimemberC = New-AzNetworkManagerStaticMember @sm
-    ```
+```azurepowershell-interactive
+$smC = @{
+    Name = Get-UniqueString $virtualNetworkC.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkC.Id
+}
+$statimemberC = New-AzNetworkManagerStaticMember @sm
+```
     
 ## Option 2 (Dynamic Membership): Using Azure Policy, dynamically add the 3 VNets for your Mesh configuration to the Network Group.
 
@@ -310,7 +311,7 @@ $conditionalMembership = '{
 }' 
 ```
         
-1. Create the Azure Policy definition using the conditional statement defined in the last step using New-AzPolicyDefinition. Replace {mgName} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `ManagementGroup = {mgName}` parameter with `Subscription = {subId}`
+Create the Azure Policy definition using the conditional statement defined in the last step using New-AzPolicyDefinition. Replace {mgName} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `ManagementGroup = {mgName}` parameter with `Subscription = {subId}`
 
 > [!IMPORTANT]
 > Policy resources must have a scope unique name. It is recommended to use a consistent hash of the network group. Below is an approach using the ARM Templates uniqueString() implementation.
@@ -335,18 +336,16 @@ $policyDefinition = New-AzPolicyDefinition $defn
 ```
 
 Once a policy is defined, it must also be applied. Replace {mgName} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `Scope = "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `Scope = "/subscriptions/{subId}"`.
-   
-1. Assign the policy definition at a scope within your network managers scope for it to begin taking effect.
 
-    ```azurepowershell-interactive
-    $assgn = @{
-        Name = Get-UniqueString $networkgroup.Id
-        PolicyDefinition  = $policyDefinition
-	Scope = "/providers/Microsoft.Management/managementGroups/{mgName}"
-    }
-    
-    $policyAssignment = New-AzPolicyAssignment $assgn
-    ```
+```azurepowershell-interactive
+$assgn = @{
+Name = Get-UniqueString $networkgroup.Id
+PolicyDefinition  = $policyDefinition
+Scope = "/providers/Microsoft.Management/managementGroups/{mgName}"
+}
+
+$policyAssignment = New-AzPolicyAssignment $assgn
+```
         
 ## Create a configuration
 
@@ -354,32 +353,32 @@ Now that the Network Group is created, and has the correct VNets, configurations
 
 1. Create a connectivity group item to add a network group to with New-AzNetworkManagerConnectivityGroupItem.
 
-    ```azurepowershell-interactive
-    $gi = @{
-        NetworkGroupId = $networkgroup.Id
-    }
-    $groupItem = New-AzNetworkManagerConnectivityGroupItem @gi
-    ```
+```azurepowershell-interactive
+$gi = @{
+NetworkGroupId = $networkgroup.Id
+}
+$groupItem = New-AzNetworkManagerConnectivityGroupItem @gi
+```
     
 1. Create a configuration group and add the group item from the previous step.
 
-    ```azurepowershell-interactive
-    [System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSNetworkManagerConnectivityGroupItem]]$configGroup = @()
-    $configGroup.Add($groupItem)
-    ```
+```azurepowershell-interactive
+[System.Collections.Generic.List[Microsoft.Azure.Commands.Network.Models.PSNetworkManagerConnectivityGroupItem]]$configGroup = @()
+$configGroup.Add($groupItem)
+```
     
 1. Create the connectivity configuration with New-AzNetworkManagerConnectivityConfiguration.
 
-    ```azurepowershell-interactive
-    $config = @{
-        Name = 'connectivityconfig'
-        ResourceGroupName = $rg.Name
-        NetworkManagerName = $networkManager.Name
-        ConnectivityTopology = 'Mesh'
-        AppliesToGroup = $configGroup
-    }
-    $connectivityconfig = New-AzNetworkManagerConnectivityConfiguration @config
-        ```                        
+```azurepowershell-interactive
+$config = @{
+Name = 'connectivityconfig'
+ResourceGroupName = $rg.Name
+NetworkManagerName = $networkManager.Name
+ConnectivityTopology = 'Mesh'
+AppliesToGroup = $configGroup
+}
+$connectivityconfig = New-AzNetworkManagerConnectivityConfiguration @config
+```                        
 
 ## Commit deployment
 
@@ -439,35 +438,35 @@ SetAzContext --subscription "{manager subscription ID}"
 
 1. Remove the connectivity deployment by deploying an empty configuration with Deploy-AzNetworkManagerCommit.
 
-    ```azurepowershell-interactive
-    [System.Collections.Generic.List[string]]$configIds = @()
-    [System.Collections.Generic.List[string]]$target = @()   
-    $target.Add("westus")     
-    $removedeployment = @{
-        Name = 'myAVNM'
-        ResourceGroupName = 'myAVNMResourceGroup'
-        ConfigurationId = $configIds
-        Target = $target
-        CommitType = 'Connectivity'
-    }
-    Deploy-AzNetworkManagerCommit @removedeployment
-    ```
+```azurepowershell-interactive
+[System.Collections.Generic.List[string]]$configIds = @()
+[System.Collections.Generic.List[string]]$target = @()   
+$target.Add("westus")     
+$removedeployment = @{
+Name = 'myAVNM'
+ResourceGroupName = 'myAVNMResourceGroup'
+ConfigurationId = $configIds
+Target = $target
+CommitType = 'Connectivity'
+}
+Deploy-AzNetworkManagerCommit @removedeployment
+```
 
 1. Remove the connectivity configuration with Remove-AzNetworkManagerConnectivityConfiguration
 
-    ```azurepowershell-interactive
-    
-    Remove-AzNetworkManagerConnectivityConfiguration @connectivityconfig.Id   
-    
-    ```
-2. Remove the policy resources with Remove-AzPolicy*
+```azurepowershell-interactive
 
-    ```azurepowershell-interactive
-    
-    Remove-AzPolicyAssignment $policyAssignment.Id
-    Remove-AzPolicyAssignment $policyDefinition.Id
-    
-    ```
+Remove-AzNetworkManagerConnectivityConfiguration @connectivityconfig.Id   
+
+```
+2. Remove the policy resources with Remove-AzPolicy.
+
+```azurepowershell-interactive
+
+Remove-AzPolicyAssignment $policyAssignment.Id
+Remove-AzPolicyAssignment $policyDefinition.Id
+
+```
 
 3. Remove the network group with Remove-AzNetworkManagerGroup.
 
@@ -477,15 +476,15 @@ SetAzContext --subscription "{manager subscription ID}"
 
 4. Delete the network manager instance with Remove-AzNetworkManager.
 
-    ```azurepowershell-interactive
-    Remove-AzNetworkManager $networkManager.Id
-    ```
+```azurepowershell-interactive
+Remove-AzNetworkManager $networkManager.Id
+```
 
 5. If you no longer need any resources under the group the network manager belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
 
-    ```azurepowershell-interactive
-    Remove-AzResourceGroup -Name 'managerAVNMResourceGroup'
-    ```
+```azurepowershell-interactive
+Remove-AzResourceGroup -Name 'managerAVNMResourceGroup'
+```
 Switch back to the subscription owning your Virtual Networks.
 
 ```azurepowershell-interactive
@@ -503,9 +502,9 @@ RemoveAzVirtualNetwork -Name VNt -ResourceGroupName 'targetAVNMResourceGroup'
 ```
 2. If you no longer need any resources under the group the virtual networks belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
 
-    ```azurepowershell-interactive
-    Remove-AzResourceGroup -Name 'targetAVNMResourceGroup'
-    ```
+```azurepowershell-interactive
+Remove-AzResourceGroup -Name 'targetAVNMResourceGroup'
+```
 
 ## Next steps
 
