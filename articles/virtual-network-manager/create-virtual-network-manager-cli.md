@@ -16,6 +16,11 @@ Get started with Azure Virtual Network Manager by using the Azure CLI to manage 
 
 In this quickstart, you'll create groups of three virtual networks (manually, and dynamically) and use Azure Virtual Network Manager to apply a mesh network topology on them. Then, you'll verify if the connectivity configuration got applied.
 
+> [!IMPORTANT]
+> Azure Virtual Network Manager is currently in public preview.
+> This preview version is provided without a service level agreement, and it's not recommended for production workloads. Certain features might not be supported or might have constrained capabilities.
+> For more information, see [Supplemental Terms of Use for Microsoft Azure Previews](https://azure.microsoft.com/support/legal/preview-supplemental-terms/).
+
 ## Prerequisites
 
 * An Azure account with an active subscription. [Create an account for free](https://azure.microsoft.com/free/?WT.mc_id=A261C142F).
