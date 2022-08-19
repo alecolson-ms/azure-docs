@@ -37,7 +37,7 @@ Switch to the subscription owning your network manager.
 
 ```azurecli-interactive
 az account set \
-    --subscription "<manager subscription ID>"
+    --subscription "{manager subscription ID}"
 ```
 
 ## Create a resource group 
@@ -52,7 +52,9 @@ az group create \
 
 ## Create a Virtual Network Manager
 
-Define the scope and access type this Network Manager instance will have. Create the scope by using [az network manager create](/cli/azure/network/manager#az-network-manager-create). Replace the value *{mgName}* with management group name or *{subscriptionId}* with subscriptions you want Virtual Network Manager to manage virtual networks for.
+Define the scope and access type this Network Manager instance will have. Create the scope by using [az network manager create](/cli/azure/network/manager#az-network-manager-create). 
+
+Virtual Network Managers can manage **mangement groups** (with management groups and subscriptions under them), or **subscriptions**. Replace {mgName} and {subId} with any management groups or subscriptions you want to manage virtual networks under.
 
 ```azurecli-interactive
 az network manager create \
@@ -60,7 +62,7 @@ az network manager create \
     --name "myAVNM" \
     --resource-group "myAVNMResourceGroup" \
     --scope-accesses "Connectivity" "SecurityAdmin" \
-    --network-manager-scopes management-groups="/Microsoft.Management/{mgName}" subscriptions="/subscriptions/{subscriptionId}"
+    --network-manager-scopes management-groups="/Microsoft.Management/{mgName}" subscriptions="/subscriptions/{subId}"
 ```
 
 ## Create a Network Group
@@ -80,7 +82,7 @@ Switch to your managed subscription. This subscription should be under the netwo
 
 ```azurecli-interactive
 az account set \
-    --subscription "<target subscription ID>"
+    --subscription "{target subscription ID}"
 ```
 
 Resources under these managed subscriptions also need to exist in resource groups under those subscriptions. Create a resource group with [az group create](/cli/azure/group#az-group-create). This example creates a resource group named **targetAVNMResourceGroup** in the **westus** location:
@@ -162,10 +164,10 @@ Switch back to the subscription owning your Network Manager.
 
 ```azurecli-interactive
 az account set \
-    --subscription "<manager subscription ID>"
+    --subscription "{manager subscription ID}"
 ```
 
-Add these static members to the Network Group. Replace <managed subscription ID> with the subscription these VNets were created under.
+Add these static members to the Network Group. Replace {target subscription id} with the subscription these VNets were created under.
 
 ```azurecli-interactive
 az network manager group static-member create \
@@ -173,7 +175,7 @@ az network manager group static-member create \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
     --resource-group "targetAVNMResourceGroup" \
-    --resource-id "/subscriptions/<managed subscription ID>/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
+    --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
 ```
 
 ```azurecli-interactive
@@ -182,7 +184,7 @@ az network manager group static-member create \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
     --resource-group "targetAVNMResourceGroup" \
-    --resource-id "/subscriptions/<managed subscription ID>/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
+    --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetB"
 ```
 
 ```azurecli-interactive
@@ -191,7 +193,7 @@ az network manager group static-member create \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
     --resource-group "targetAVNMResourceGroup" \
-    --resource-id "/subscriptions/<managed subscription ID>/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
+    --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetC"
 ```
 
 ## Option 2 (Dynamic Membership): Using Azure Policy, dynamically add the 3 VNets for your Mesh configuration to the Network Group.
@@ -202,25 +204,25 @@ Switch to the subscription owning your network manager.
 
 ```azurecli-interactive
 az account set \
-    --subscription "<manager subscription ID>"
+    --subscription "{manager subscription ID}"
 ```
 
 With Azure Policy, create a policy to accept only VNets with the tag "Color:Red" and "VNet" in the name.  This policy will accept VNetA, VNetB and VNetC, but reject the Unscoped_VNet and VNt. 
 
-Policies can be applied to a subscription, or a management group (with potentially several child level management groups and subscriptions under it). They must always be defined at a level at or above where they're created. 
+Policies can be applied to a subscription or management group, and must always be defined _at or above_ the level they're created.
 
-Create a Policy definition with [az policy definition create](/cli/azure/policy/definition#az-policy-definition-create). Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group {mg}` parameter with `--subscription {sub}`.
+Create a Policy definition with [az policy definition create](/cli/azure/policy/definition#az-policy-definition-create). Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group {mgName}` parameter with `--subscription {subId}`.
 
 ```azurecli-interactive
 az policy definition create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
     --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Blue\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
-    --management-group "{mg}" \
+    --management-group "{mgName}" \
     --mode "Microsoft.Network.Data"
 ```
 
-Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group "/providers/Microsoft.Management/managementGroups/{mg}` parameter with `--subscription "/subscriptions/{sub}"`.
+Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `--subscription "/subscriptions/{subId}"`.
 
 ```azurecli-interactive
 az policy assignment create \
@@ -350,7 +352,7 @@ az account set \
         --resource-group "managerAVNMResourceGroup"
     ```
 
-1. If you no longer need the resource created, delete the resource group with [az group delete](/cli/azure/group#az-group-delete):
+1. If you no longer need any resources under the resource group the network manager belongs to, delete it with [az group delete](/cli/azure/group#az-group-delete):
 
     ```azurecli-interactive
     az group delete \
@@ -364,7 +366,7 @@ az account set \
     --subscription "<target subscription ID>"
 ```
     
-1. If you no longer need the VNets, delete them, including the ones optionally created.
+1. Delete the sample VNets for testing with [az network vnet delete](/cli/azure/network/vnet#az-network-vnet-delete):
 
 ```azurecli-interactive
 az network vnet delete \
@@ -387,6 +389,13 @@ az network vnet delete \
     --name "VNt" \
     --resource-group "targetAVNMResourceGroup"
 ```
+
+1. If you no longer need any resources under the resource group the virtual networks belongs to, delete it with [az group delete](/cli/azure/group#az-group-delete):
+
+    ```azurecli-interactive
+    az group delete \
+        --name "targetAVNMResourceGroup"
+    ```
 
 ## Next steps
 
