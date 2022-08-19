@@ -484,7 +484,7 @@ SetAzContext --subscription "{manager subscription ID}"
 5. If you no longer need any resources under the group the network manager belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
 
     ```azurepowershell-interactive
-    Remove-AzResourceGroup -Name 'myAVNMResourceGroup'
+    Remove-AzResourceGroup -Name 'managerAVNMResourceGroup'
     ```
 Switch back to the subscription owning your Virtual Networks.
 
@@ -495,8 +495,17 @@ SetAzContext --subscription "{target subscription ID}"
 1. Delete the sample VNets for testing with 
 
 ```azurepowershell-interactive
-SetAzContext --subscription "{target subscription ID}"
+RemoveAzVirtualNetwork -Name VNetA -ResourceGroupName 'targetAVNMResourceGroup'
+RemoveAzVirtualNetwork -Name VNetB -ResourceGroupName 'targetAVNMResourceGroup'
+RemoveAzVirtualNetwork -Name VNetC -ResourceGroupName 'targetAVNMResourceGroup'
+RemoveAzVirtualNetwork -Name Unscoped_VNet -ResourceGroupName 'targetAVNMResourceGroup'
+RemoveAzVirtualNetwork -Name VNt -ResourceGroupName 'targetAVNMResourceGroup'
 ```
+2. If you no longer need any resources under the group the virtual networks belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
+
+    ```azurepowershell-interactive
+    Remove-AzResourceGroup -Name 'targetAVNMResourceGroup'
+    ```
 
 ## Next steps
 
