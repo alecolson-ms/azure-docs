@@ -307,6 +307,13 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
 * All configurations have been deleted.
 * All network groups have been deleted.
 
+Switch back to the subscription owning your network manager.
+
+```azurecli-interactive
+az account set \
+    --subscription "<manager subscription ID>"
+```
+
 1. Remove the connectivity deployment by committing no configurations with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit):
 
     ```azurecli-interactive
@@ -314,7 +321,7 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
         --network-manager-name "myAVNM" \
         --commit-type "Connectivity" \
         --target-locations "westus" \
-        --resource-group "myAVNMResourceGroup"
+        --resource-group "managerAVNMResourceGroup"
     ```
 
 1. Remove the connectivity configuration with [az network manager connect-config delete](/cli/azure/network/manager/connect-config#az-network-manager-connect-config-delete):
@@ -323,7 +330,7 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
     az network manager connect-config delete \
         --configuration-name "connectivityconfig" \
         --name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
+        --resource-group "managerAVNMResourceGroup"
     ```
 
 1. Remove the network group with [az network manager group delete](/cli/azure/network/manager/group#az-network-manager-group-delete):
