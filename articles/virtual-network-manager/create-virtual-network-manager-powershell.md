@@ -11,9 +11,9 @@ ms.custom: template-quickstart, ignite-fall-2021, mode-api
 
 # Quickstart: Create a mesh network with Azure Virtual Network Manager using Azure PowerShell
 
-Get started with Azure Virtual Network Manager by using the Azure PowerShell to manage connectivity for your virtual networks.
+Get started with Azure Virtual Network Manager by using the Azure Powershell to manage connectivity for all your virtual networks.
 
-In this quickstart, you'll deploy three virtual networks and use Azure Virtual Network Manager to create a mesh network topology.
+In this quickstart, you'll create groups of three virtual networks (manually, and dynamically) and use Azure Virtual Network Manager to apply a mesh network topology on them. Then, you'll verify if the connectivity configuration got applied.
 
 > [!IMPORTANT]
 > Azure Virtual Network Manager is currently in public preview.
@@ -39,37 +39,37 @@ Install the latest *Az.Network* Azure PowerShell module using this command:
 
 ## Create a resource group
 
-Before you can create an Azure Virtual Network Manager, you have to create a resource group to host the Network Manager. Create a resource group with [New-AzResourceGroup](/powershell/module/az.Resources/New-azResourceGroup). This example creates a resource group named **myAVNMResourceGroup** in the **WestUS** location.
+Before you can create an Azure Virtual Network Manager, you have to create a resource group to host the Network Manager. Create a resource group with [New-AzResourceGroup](/powershell/module/az.Resources/New-azResourceGroup). This example creates a resource group named **managerAVNMResourceGroup** in the **WestUS** location.
 
 ```azurepowershell-interactive
 
 $location = "West US"
 $rg = @{
-    Name = 'myAVNMResourceGroup'
+    Name = 'managerAVNMResourceGroup'
     Location = $location
 }
 New-AzResourceGroup @rg
 
 ```
 
-## Create Virtual Network Manager
+## Create a Virtual Network Manager
 
-1. Define the scope and access type this Azure Virtual Network Manager instance will have. You can choose to create the scope with subscriptions group or management group or a combination of both. Create the scope by using New-AzNetworkManagerScope.
+Define the scope and access type this Network Manager instance will have. Virtual Network Managers can manage **management groups** (which can contain other management groups, and many subscriptions under them)) **subscriptions**, or a combination of both. Replace {mgName} and {subId} with any management groups or subscriptions you want to manage virtual networks under.
 
     ```azurepowershell-interactive
     
     Import-Module -Name Az.Network -RequiredVersion "4.15.1"
     
     [System.Collections.Generic.List[string]]$subGroup = @()  
-    $subGroup.Add("/subscriptions/abcdef12-3456-7890-abcd-ef1234567890")
+    $subGroup.Add("/subscriptions/{subId}")
     [System.Collections.Generic.List[string]]$mgGroup = @()  
-    $mgGroup.Add("/providers/Microsoft.Management/managementGroups/abcdef12-3456-7890-abcd-ef1234567890")
+    $mgGroup.Add("/providers/Microsoft.Management/managementGroups/{mgName}")
     
     [System.Collections.Generic.List[String]]$access = @()  
     $access.Add("Connectivity");  
     $access.Add("SecurityAdmin"); 
     
-    $scope = New-AzNetworkManagerScope -Subscription $subGroup  -ManagementGroup $mgGroup
+    $scope = New-AzNetworkManagerScope -Subscription $subGroup -ManagementGroup $mgGroup
     
     ```
 
@@ -86,7 +86,20 @@ New-AzResourceGroup @rg
     $networkmanager = New-AzNetworkManager @avnm
     ```
 
-## Create three virtual networks
+## Create a Network Group
+
+Virtual Network Manager applies configurations to groups of VNets by placing them in **Network Groups.** Create a Network Group with New-AzNetworkManagerGroup.
+
+    ```azurepowershell-interactive
+    $ng = @{
+            Name = 'myNetworkGroup'
+            ResourceGroupName = $rg.Name
+            NetworkManagerName = $networkManager.Name
+        }
+        $networkgroup = New-AzNetworkManagerGroup @ng
+    ```
+    
+## Create Virtual Networks to be managed by your Network Manager.
 
 Create three virtual networks with [New-AzVirtualNetwork](/powershell/module/az.network/new-azvirtualnetwork). This example creates virtual networks named **VNetA**, **VNetB** and **VNetC** in the **West US** location. If you already have virtual networks you want create a mesh network with, you can skip to the next section.
 
@@ -146,19 +159,6 @@ $subnetC = @{
 $subnetConfigC = Add-AzVirtualNetworkSubnetConfig @subnetC
 $virtualnetworkC | Set-AzVirtualNetwork
 ```
-
-## Create a network group
-
-1. Create a network group to add virtual networks to.
-
-    ```azurepowershell-interactive
-    $ng = @{
-            Name = 'myNetworkGroup'
-            ResourceGroupName = $rg.Name
-            NetworkManagerName = $networkManager.Name
-        }
-        $networkgroup = New-AzNetworkManagerGroup @ng
-    ```
         
 ### Option 1: Static membership
     
@@ -168,7 +168,7 @@ $virtualnetworkC | Set-AzVirtualNetwork
     ```azurepowershell-interactive
         function Get-UniqueString ([string]$id, $length=13)
         {
-        $hashArray = (new-object System.Security.Cryptography.SHA512Managed).ComputeHash($id.ToCharArray())
+        $Array = (new-object System.Security.Cryptography.SHA512Managed).ComputeHash($id.ToCharArray())
         -join ($hashArray[1..$length] | ForEach-Object { [char]($_ % 26 + [byte][char]'a') })
         }
     ```
