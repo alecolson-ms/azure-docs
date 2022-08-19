@@ -214,7 +214,7 @@ az account set \
 
 With Azure Policy, create a policy to accept only VNets with the tag "Color:Red" and "VNet" in the name.  This policy will accept VNetA, VNetB and VNetC, but reject the Unscoped_VNet and VNt. 
 
-Policies can be applied to a subscription or management group, and must always be defined _at or above_ the level they're created.
+Policies can be applied to a subscription or management group, and must always be defined _at or above_ the level they're created. Only virtual networks within a policy scope are added to a Network Group.
 
 Create a Policy definition with [az policy definition create](/cli/azure/policy/definition#az-policy-definition-create). Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group {mgName}` parameter with `--subscription {subId}`.
 
@@ -222,7 +222,7 @@ Create a Policy definition with [az policy definition create](/cli/azure/policy/
 az policy definition create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
-    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Blue\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
+    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Red\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
     --management-group "{mgName}" \
     --mode "Microsoft.Network.Data"
 ```
@@ -233,7 +233,7 @@ Once a policy is defined, it must also be applied. Replace {mg} with the managem
 az policy assignment create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
-    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Blue\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
+    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Red\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
     --management-group "/providers/Microsoft.Management/managementGroups/{mg}" \
     --mode "Microsoft.Network.Data"
 ```
@@ -257,7 +257,7 @@ az network manager connect-config create \
 
 ## Commit deployment
 
-When created, configurations are saved within your network manager, but must be **committed** to actually deploy those configurations. Commit a connectivity configuration with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit):
+Commit the configuration to the target regions with with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit). This will trigger your configuration to begin taking effect.
 
 ```azurecli-interactive
 az network manager post-commit \
@@ -357,7 +357,7 @@ az account set \
         --resource-group "managerAVNMResourceGroup"
     ```
 
-1. If you no longer need any resources under the resource group the network manager belongs to, delete it with [az group delete](/cli/azure/group#az-group-delete):
+1. If you no longer need any resources under the group the network manager belongs to, delete the resource group with [az group delete](/cli/azure/group#az-group-delete):
 
     ```azurecli-interactive
     az group delete \
