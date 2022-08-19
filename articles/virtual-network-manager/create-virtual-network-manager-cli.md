@@ -233,7 +233,7 @@ az policy assignment create \
 
 ## Create a configuration
 
-Now that the Network Group is created, and has the correct VNets, you can 
+Now that the Network Group is created, and has the correct VNets, configurations can be applied to this group (and all VNets under it).
 
 Create a mesh network topology configuration with [az network manager connect-config create](/cli/azure/network/manager/connect-config#az-network-manager-connect-config-create). Replace {manager_subscription_id} with the subscription that owns your network manager.
 
@@ -261,7 +261,43 @@ az network manager post-commit \
     --resource-group "myAVNMResourceGroup"
 ```
 
-## 
+## Verify that the configurations have been deployed as intended.
+
+Switch back to the subscription owning your Virtual Networks.
+
+```azurecli-interactive
+az account set \
+    --subscription "<manager subscription ID>"
+```
+
+Virtual Networks will display configurations applied to them with [az network manager list-effective-connectivity-config](/cli/azure/network/manager#az-network-manager-list-effective-connectivity-config):
+
+```azurecli-interactive
+az network manager list-effective-connectivity-config \
+    -g "targetAVNMResourceGroup"
+    --virtual-network-name "VNetA"
+
+az network manager list-effective-connectivity-config \
+    -g "targetAVNMResourceGroup"
+    --virtual-network-name "VNetB"
+
+
+az network manager list-effective-connectivity-config \
+    -g "targetAVNMResourceGroup"
+    --virtual-network-name "VNetC"
+```
+
+Optionally, if you created **Unscoped_VNet** and **VNt** earlier, you can check that configurations have _not_ been applied to them accordingly:
+
+```
+az network manager list-effective-connectivity-config \
+    -g "targetAVNMResourceGroup"
+    --virtual-network-name "Unscoped_VNet"
+
+az network manager list-effective-connectivity-config \
+    -g "targetAVNMResourceGroup"
+    --virtual-network-name "VNt"
+```
 
 ## Clean up resources
 
