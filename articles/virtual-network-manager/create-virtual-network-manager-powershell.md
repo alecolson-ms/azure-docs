@@ -102,10 +102,11 @@ Define the scope and access type this Network Manager instance will have. Virtua
 Virtual Network Manager applies configurations to groups of VNets by placing them in **Network Groups.** Create a Network Group with New-AzNetworkManagerGroup.
 
     ```azurepowershell-interactive
-    $ng = @{
+        $ng = @{
             Name = 'myNetworkGroup'
             ResourceGroupName = $rg.Name
             NetworkManagerName = $networkManager.Name
+	    MemberType = 'Microsoft.Network/VirtualNetworks'
         }
         $networkgroup = New-AzNetworkManagerGroup @ng
     ```
@@ -132,9 +133,9 @@ $vnetA = @{
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
     AddressPrefix = '10.0.0.0/16'  
-		  Tag = @{
-			   Color = "Red"
-		  }	  
+    Tag = @{
+	   Color = "Red"
+    }	  
 }
 
 $virtualNetworkA = New-AzVirtualNetwork @vnetA
@@ -144,9 +145,9 @@ $vnetB = @{
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
     AddressPrefix = '10.1.0.0/16'
-		  Tag = @{
-			   Color = "Red"
-		  }	  
+    Tag = @{
+	   Color = "Red"
+    }	  
 }
 $virtualNetworkB = New-AzVirtualNetwork @vnetB
 
@@ -155,9 +156,9 @@ $vnetC = @{
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
     AddressPrefix = '10.2.0.0/16'
-		  Tag = @{
-			   Color = "Red"
-		  }	  
+    Tag = @{
+	   Color = "Red"
+    }		  
 }
 $virtualNetworkC = New-AzVirtualNetwork @vnetC
 ```
@@ -170,9 +171,9 @@ $Unscoped_VNet = @{
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
     AddressPrefix = '10.3.0.0/16'
-		  Tag = @{
-			   Color = "Blue"
-		  }	  
+    Tag = @{
+	   Color = "Blue"
+    }		  
 }
 $virtualNetworkUnscoped = New-AzVirtualNetwork @Unscoped_VNet
 
@@ -181,10 +182,11 @@ $VNt = @{
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
     AddressPrefix = '10.4.0.0/16'
-		  Tag = @{
-			   Color = "Red"
-		  }	  
+    Tag = @{
+	   Color = "Red"
+    }	  
 }
+$virtualNetworkUnscoped = New-AzVirtualNetwork @Unscoped_VNet
 ```
 
 ### Add a subnet to each virtual network
@@ -223,7 +225,7 @@ Using **static membership**, you'll directly add 3 VNets to your Network Group.
 
 Switch back to the subscription owning your Network Manager.
 
-```azurecli-interactive
+```azurepowershell-interactive
 SetAzContext --subscription "{manager subscription ID}"
 ```
     
@@ -271,7 +273,17 @@ SetAzContext --subscription "{manager subscription ID}"
         $statimemberC = New-AzNetworkManagerStaticMember @sm
     ```
     
-### Option 2: Dynamic membership
+## Option 2 (Dynamic Membership): Using Azure Policy, dynamically add the 3 VNets for your Mesh configuration to the Network Group.
+
+Using Dynamic Membership through Azure Policy, you'll create a policy to find and automatically add the right VNets to your network group.
+
+Switch to the subscription owning your network manager.
+
+```azurepowershell-interactive
+SetAzContext --subscription "{manager subscription ID}"
+```
+
+With Azure Policy, create a policy to accept only VNets with the tag "Color:Red" and "VNet" in the name.  This policy will accept VNetA, VNetB and VNetC, but reject the Unscoped_VNet and VNt. 
 
 1. Define the conditional statement and store it in a variable.
 > [!NOTE]
@@ -288,6 +300,10 @@ $conditionalMembership = '{
         "field": "name", 
         "contains": "VNet" 
         } 
+	{
+	"field": "tags[\'Color\']",
+	"equals": "Red"
+	}
     ] 
 }' 
 ```
@@ -314,6 +330,8 @@ $defn = @{
     
 $policyDefinition = New-AzPolicyDefinition $defn
 ```
+
+Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `--subscription "/subscriptions/{subId}"`.
    
 1. Assign the policy definition at a scope within your network managers scope for it to begin taking effect.
 
