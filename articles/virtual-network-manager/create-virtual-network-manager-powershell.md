@@ -285,6 +285,8 @@ SetAzContext --subscription "{manager subscription ID}"
 
 With Azure Policy, create a policy to accept only VNets with the tag "Color:Red" and "VNet" in the name.  This policy will accept VNetA, VNetB and VNetC, but reject the Unscoped_VNet and VNt. 
 
+Policies can be applied to a subscription or management group, and must always be defined _at or above_ the level they're created. Only virtual networks within a policy scope are added to a Network Group.
+
 1. Define the conditional statement and store it in a variable.
 > [!NOTE]
 > It is recommended to scope all of your conditionals to only scan for type `Microsoft.Network/virtualNetwork` for efficiency.
@@ -308,7 +310,7 @@ $conditionalMembership = '{
 }' 
 ```
         
-1. Create the Azure Policy definition using the conditional statement defined in the last step using New-AzPolicyDefinition.
+1. Create the Azure Policy definition using the conditional statement defined in the last step using New-AzPolicyDefinition. Replace {mgName} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `ManagementGroup = {mgName}` parameter with `Subscription = {subId}`
 
 > [!IMPORTANT]
 > Policy resources must have a scope unique name. It is recommended to use a consistent hash of the network group. Below is an approach using the ARM Templates uniqueString() implementation.
@@ -326,12 +328,13 @@ $defn = @{
     Name = Get-UniqueString $networkgroup.Id
     Mode = 'Microsoft.Network.Data'
     Policy = $conditionalMembership
+    ManagementGroup = {mgName}
 }
     
-$policyDefinition = New-AzPolicyDefinition $defn
+$policyDefinition = New-AzPolicyDefinition $defn 
 ```
 
-Once a policy is defined, it must also be applied. Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `--subscription "/subscriptions/{subId}"`.
+Once a policy is defined, it must also be applied. Replace {mgName} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `Scope = "/providers/Microsoft.Management/managementGroups/{mgName}` parameter with `Scope = "/subscriptions/{subId}"`.
    
 1. Assign the policy definition at a scope within your network managers scope for it to begin taking effect.
 
@@ -339,12 +342,15 @@ Once a policy is defined, it must also be applied. Replace {mg} with the managem
     $assgn = @{
         Name = Get-UniqueString $networkgroup.Id
         PolicyDefinition  = $policyDefinition
+	Scope = "/providers/Microsoft.Management/managementGroups/{mgName}"
     }
     
     $policyAssignment = New-AzPolicyAssignment $assgn
     ```
         
 ## Create a configuration
+
+Now that the Network Group is created, and has the correct VNets, configurations can be applied to this group (and all VNets under it).
 
 1. Create a connectivity group item to add a network group to with New-AzNetworkManagerConnectivityGroupItem.
 
@@ -395,6 +401,28 @@ $deployment = @{
 Deploy-AzNetworkManagerCommit @deployment 
 ```
 
+## Verify that the configurations have been deployed as intended.
+
+Switch back to the subscription owning your Virtual Networks.
+
+```azurepowershell-interactive
+SetAzContext --subscription "{target subscription ID}"
+```
+
+Verify these configurations have been deployed.
+
+```
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName "targetAVNMResourceGroup" -VirtualNetworkName "VNetA"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName "targetAVNMResourceGroup" -VirtualNetworkName "VNetB"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName "targetAVNMResourceGroup" -VirtualNetworkName "VNetC"
+```
+
+Optionally, if you created **Unscoped_VNet** and **VNt** earlier, you can check that configurations have _not_ been applied to them accordingly:
+```
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName "targetAVNMResourceGroup" -VirtualNetworkName "Unscoped_VNet"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName "targetAVNMResourceGroup" -VirtualNetworkName "VNt"
+```
+
 ## Clean up resources
 
 If you no longer need the Azure Virtual Network Manager, you'll need to make sure all of following is true before you can delete the resource:
@@ -402,6 +430,12 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
 * There are no deployments of configurations to any region.
 * All configurations have been deleted.
 * All network groups have been deleted.
+
+Switch back to the subscription owning your Network Manager.
+
+```azurepowershell-interactive
+SetAzContext --subscription "{manager subscription ID}"
+```
 
 1. Remove the connectivity deployment by deploying an empty configuration with Deploy-AzNetworkManagerCommit.
 
@@ -447,11 +481,22 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
     Remove-AzNetworkManager $networkManager.Id
     ```
 
-5. If you no longer need the resource created, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
+5. If you no longer need any resources under the group the network manager belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
 
     ```azurepowershell-interactive
     Remove-AzResourceGroup -Name 'myAVNMResourceGroup'
     ```
+Switch back to the subscription owning your Virtual Networks.
+
+```azurepowershell-interactive
+SetAzContext --subscription "{target subscription ID}"
+```
+
+1. Delete the sample VNets for testing with 
+
+```azurepowershell-interactive
+SetAzContext --subscription "{target subscription ID}"
+```
 
 ## Next steps
 
