@@ -37,6 +37,17 @@ Install the latest *Az.Network* Azure PowerShell module using this command:
  Install-Module -Name Az.Network -RequiredVersion 4.15.1-preview -AllowPrerelease
 ```
 
+##  Set context to your subscription.
+
+A network manager must exist under one subscription. Resources **managed** by that network manager, such as VNets, can exist across several other subscriptions and tenants.
+You'll switch between **one manager subscription,** and **one target subscription.** (These can be the same, if you so choose).
+
+Switch to the subscription owning your network manager.
+
+```azurecli-interactive
+SetAzContext --subscription "{manager subscription ID}"
+```
+
 ## Create a resource group
 
 Before you can create an Azure Virtual Network Manager, you have to create a resource group to host the Network Manager. Create a resource group with [New-AzResourceGroup](/powershell/module/az.Resources/New-azResourceGroup). This example creates a resource group named **managerAVNMResourceGroup** in the **WestUS** location.
@@ -101,14 +112,29 @@ Virtual Network Manager applies configurations to groups of VNets by placing the
     
 ## Create Virtual Networks to be managed by your Network Manager.
 
-Create three virtual networks with [New-AzVirtualNetwork](/powershell/module/az.network/new-azvirtualnetwork). This example creates virtual networks named **VNetA**, **VNetB** and **VNetC** in the **West US** location. If you already have virtual networks you want create a mesh network with, you can skip to the next section.
+Switch to your managed subscription. This subscription should be under the network manager scopes you defined above.
+
+```azurecli-interactive
+SetAzContext --subscription "{target subscription ID}"
+```
+
+Resources under these managed subscriptions also need to exist in resource groups under those subscriptions. Create a resource group with [az group create](/cli/azure/group#az-group-create). This example creates a resource group named **targetAVNMResourceGroup** in the **westus** location:
+
+```azurecli-interactive
+New-AzResourceGroup --name targetAVNMResourceGroup --location "West US"
+```
+
+Create three virtual networks with [New-AzVirtualNetwork](/powershell/module/az.network/new-azvirtualnetwork). This example creates virtual networks named **VNetA**, **VNetB** and **VNetC** in the **West US** location, given the arbitrary tag **Color=Red** or **Color=Blue** to later demonstrate policy. If you already have virtual networks you want create a mesh network with, you can skip to the next section.
 
 ```azurepowershell-interactive
 $vnetA = @{
     Name = 'VNetA'
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
-    AddressPrefix = '10.0.0.0/16'    
+    AddressPrefix = '10.0.0.0/16'  
+		  Tag = @{
+			   Color = "Red"
+		  }	  
 }
 
 $virtualNetworkA = New-AzVirtualNetwork @vnetA
@@ -117,7 +143,10 @@ $vnetB = @{
     Name = 'VNetB'
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
-    AddressPrefix = '10.1.0.0/16'    
+    AddressPrefix = '10.1.0.0/16'
+		  Tag = @{
+			   Color = "Red"
+		  }	  
 }
 $virtualNetworkB = New-AzVirtualNetwork @vnetB
 
@@ -125,9 +154,37 @@ $vnetC = @{
     Name = 'VNetC'
     ResourceGroupName = 'myAVNMResourceGroup'
     Location = $location
-    AddressPrefix = '10.2.0.0/16'    
+    AddressPrefix = '10.2.0.0/16'
+		  Tag = @{
+			   Color = "Red"
+		  }	  
 }
 $virtualNetworkC = New-AzVirtualNetwork @vnetC
+```
+
+Optionally, create virtual networks called **Unscoped_VNet** and **VNt** to see how Policy can dynamically include/exclude VNets managed by your Virtual Network Manager.
+
+```
+$Unscoped_VNet = @{
+    Name = 'Unscoped_VNet'
+    ResourceGroupName = 'myAVNMResourceGroup'
+    Location = $location
+    AddressPrefix = '10.3.0.0/16'
+		  Tag = @{
+			   Color = "Blue"
+		  }	  
+}
+$virtualNetworkUnscoped = New-AzVirtualNetwork @Unscoped_VNet
+
+$VNt = @{
+    Name = 'VNt'
+    ResourceGroupName = 'myAVNMResourceGroup'
+    Location = $location
+    AddressPrefix = '10.4.0.0/16'
+		  Tag = @{
+			   Color = "Red"
+		  }	  
+}
 ```
 
 ### Add a subnet to each virtual network
@@ -160,7 +217,15 @@ $subnetConfigC = Add-AzVirtualNetworkSubnetConfig @subnetC
 $virtualnetworkC | Set-AzVirtualNetwork
 ```
         
-### Option 1: Static membership
+## Option 1 (Static Membership): Manually add the 3 VNets for your Mesh configuration to the Network Group.
+
+Using **static membership**, you'll directly add 3 VNets to your Network Group.
+
+Switch back to the subscription owning your Network Manager.
+
+```azurecli-interactive
+SetAzContext --subscription "{manager subscription ID}"
+```
     
 1. Add the static member to the network group with the following commands:
     1. Static members must have a network group scoped unique name. It's recommended to use a consistent hash of the virtual network ID. Below is an approach using the ARM Templates uniqueString() implementation.
