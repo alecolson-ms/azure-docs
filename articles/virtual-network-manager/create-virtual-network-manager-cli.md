@@ -35,7 +35,8 @@ To begin your configuration, sign in to your Azure account. If you use the Cloud
 az login
 ```
 
-A network manager must exist under one subscription. Resources **managed** by that network manager, such as VNets, can exist across several other subscriptions and tenants.
+A network manager must exist under one subscription. 
+Resources **managed** by that network manager, however, such as VNets, can exist across several other subscriptions and tenants.
 You'll switch between **one manager subscription,** and **one target subscription.** (These can be the same, if you so choose).
 
 Switch to the subscription owning your network manager.
@@ -83,7 +84,7 @@ az network manager group create \
 
 ## Create Virtual Networks managed by your Network Manager.
 
-Switch to your managed subscription. This subscription should be under the network manager scopes you defined above.
+Switch to the subscription you want to create VNets under. This subscription should be under the network manager scopes you defined above.
 
 ```azurecli-interactive
 az account set \
@@ -165,7 +166,7 @@ az network vnet subnet create \
 
 Using **static membership**, you'll directly add 3 VNets to your Network Group.
 
-Switch back to the subscription owning your Network Manager.
+Ensure you're using the subscription that owns your Network Manager.
 
 ```azurecli-interactive
 az account set \
@@ -270,11 +271,11 @@ az network manager post-commit \
 
 ## Verify that the configurations have been deployed as intended.
 
-Switch back to the subscription owning your Virtual Networks.
+Only the subscription owning the Virtual Networks can verify that configurations have been applied to them. Switch back to that subscription.
 
 ```azurecli-interactive
 az account set \
-    --subscription "<manager subscription ID>"
+    --subscription "<target subscription ID>"
 ```
 
 Virtual Networks will display configurations applied to them with [az network manager list-effective-connectivity-config](/cli/azure/network/manager#az-network-manager-list-effective-connectivity-config):
@@ -314,7 +315,7 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
 * All configurations have been deleted.
 * All network groups have been deleted.
 
-Switch back to the subscription owning your network manager.
+Ensure you're using the subscription that owns your network manager.
 
 ```azurecli-interactive
 az account set \
@@ -364,7 +365,7 @@ az account set \
         --name "managerAVNMResourceGroup"
     ```
     
-Switch back to the subscription owning your virtual networks.
+Ensure you're using the subscription that owns your virtual networks.
 
 ```azurecli-interactive
 az account set \
