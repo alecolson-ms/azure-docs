@@ -339,7 +339,7 @@ az account set \
     az network manager group delete \
         --name "myNetworkGroup" \
         --network-manager-name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
+        --resource-group "managerAVNMResourceGroup"
     ```
 
 1. Delete the network manager instance with [az network manager delete](/cli/azure/network/manager#az-network-manager-delete):
@@ -347,15 +347,46 @@ az account set \
     ```azurecli-interactive
     az network manager delete \
         --name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
+        --resource-group "managerAVNMResourceGroup"
     ```
 
 1. If you no longer need the resource created, delete the resource group with [az group delete](/cli/azure/group#az-group-delete):
 
     ```azurecli-interactive
     az group delete \
-        --name "myAVNMResourceGroup"
+        --name "managerAVNMResourceGroup"
     ```
+    
+Switch back to the subscription owning your virtual networks.
+
+```azurecli-interactive
+az account set \
+    --subscription "<target subscription ID>"
+```
+    
+1. If you no longer need the VNets, delete them, including the ones optionally created.
+
+```azurecli-interactive
+az network vnet delete \
+    --name "VNetA" \
+    --resource-group "targetAVNMResourceGroup"
+
+az network vnet delete \
+    --name "VNetB" \
+    --resource-group "targetAVNMResourceGroup"
+
+az network vnet delete \
+    --name "VNetC" \
+    --resource-group "targetAVNMResourceGroup"
+
+az network vnet delete \
+    --name "Unscoped_VNet" \
+    --resource-group "targetAVNMResourceGroup"
+
+az network vnet delete \
+    --name "VNt" \
+    --resource-group "targetAVNMResourceGroup"
+```
 
 ## Next steps
 
