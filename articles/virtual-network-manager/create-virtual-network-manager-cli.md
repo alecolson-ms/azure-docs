@@ -180,7 +180,7 @@ az network manager group static-member create \
     --name "VNetA" \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
-    --resource-group "targetAVNMResourceGroup" \
+    --resource-group "managerAVNMResourceGroup" \
     --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
 ```
 
@@ -189,7 +189,7 @@ az network manager group static-member create \
     --name "VNetB" \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
-    --resource-group "targetAVNMResourceGroup" \
+    --resource-group "managerAVNMResourceGroup" \
     --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetB"
 ```
 
@@ -198,7 +198,7 @@ az network manager group static-member create \
     --name "VNetC" \
     --network-group "myNetworkGroup" \
     --network-manager "myAVNM" \
-    --resource-group "targetAVNMResourceGroup" \
+    --resource-group "managerAVNMResourceGroup" \
     --resource-id "/subscriptions/{target subscription id}/resourceGroups/targetAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetC"
 ```
 
