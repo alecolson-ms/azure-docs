@@ -304,7 +304,7 @@ $conditionalMembership = '{
         "contains": "VNet" 
         } 
 	{
-	"field": "tags[\'Color\']",
+	"field": "tags[''Color'']",
 	"equals": "Red"
 	}
     ] 
