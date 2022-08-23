@@ -220,6 +220,7 @@ Policies can be applied to a subscription or management group, and must always b
 Create a Policy definition with [az policy definition create](/cli/azure/policy/definition#az-policy-definition-create). Replace {mg} with the management group you want to apply this policy to. If you want to apply it to a subscription, replace the `--management-group {mgName}` parameter with `--subscription {subId}`.
 
 ```azurecli-interactive
+set networkGroupId="subscriptions/<manager subscription id>/resourceGroups/managerAVNMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/networkGroups/myNetworkGroup"
 az policy definition create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
