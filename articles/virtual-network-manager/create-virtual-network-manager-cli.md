@@ -223,7 +223,7 @@ Create a Policy definition with [az policy definition create](/cli/azure/policy/
 az policy definition create \
     --name "takeRedVNets" \
     --description "Take only virtual networks with VNet in the name and the tag Color:Red" \
-    --rules ""{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Red\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}"" \
+    --rules "{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['Color']\",\"equals\":\"Red\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"%networkGroupId%\"}}}" \
     --management-group "{mgName}" \
     --mode "Microsoft.Network.Data"
 ```
