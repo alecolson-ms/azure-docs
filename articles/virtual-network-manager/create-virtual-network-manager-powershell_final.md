@@ -203,31 +203,33 @@ Azure Virtual Network manager allows you two methods for adding membership to a 
 
 Using **static membership**, you'll manually add 3 VNets for your Mesh configuration to your Network Group with [az network manager group static-member create](/cli/azure/network/manager/group/static-member#az-network-manager-group-static-member-create). Replace <subscription_id> with the subscription these VNets were created under.
 
-```azurecli
-az network manager group static-member create \
-    --name "VNetA" \
-    --network-group "myNetworkGroup" \
-    --network-manager "myAVNM" \
-    --resource-group "myAVNMResourceGroup" \
-    --resource-id "/subscriptions/<subscription_id>/resourceGroups/myAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetA"
-```
+```azurepowershell-interactive
+$smA = @{
+    Name = Get-UniqueString $virtualNetworkA.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkA.Id
+}
+$staticmemberA = New-AzNetworkManagerStaticMember @smA
 
-```azurecli
-az network manager group static-member create \
-    --name "VNetB" \
-    --network-group "myNetworkGroup" \
-    --network-manager "myAVNM" \
-    --resource-group "myAVNMResourceGroup" \
-    --resource-id "/subscriptions/<subscription_id>/resourceGroups/myAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetB"
-```
+$smB = @{
+    Name = Get-UniqueString $virtualNetworkB.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkB.Id
+}
+$staticmemberB = New-AzNetworkManagerStaticMember @smB
 
-```azurecli
-az network manager group static-member create \
-    --name "VNetC" \
-    --network-group "myNetworkGroup" \
-    --network-manager "myAVNM" \
-    --resource-group "myAVNMResourceGroup" \
-    --resource-id "/subscriptions/<subscription_id>/resourceGroups/myAVNMResourceGroup/providers/Microsoft.Network/virtualnetworks/VNetC"
+$smC = @{
+    Name = Get-UniqueString $virtualNetworkC.Id
+    ResourceGroupName = $rg.Name
+    NetworkGroupName = $networkGroup.Name
+    NetworkManagerName = $networkManager.Name
+    ResourceId = $virtualNetworkC.Id
+}
+$staticmemberC = New-AzNetworkManagerStaticMember @smC
 ```
 ### Dynamic membership option
 
@@ -237,77 +239,117 @@ Using [Azure Policy](concept-azure-policy-integration.md), you'll dynamically ad
 > Policies can be applied to a subscription or management group, and must always be defined *at or above* the level they're created. Only virtual networks within a policy scope are added to a Network Group.
 
 ### Create a Policy definition
-Create a Policy definition with [az policy definition create](/cli/azure/policy/definition#az-policy-definition-create) for virtual networks tagged as **Prod**. Replace *<subscription_id>* with the subscription you want to apply this policy to. If you want to apply it to a management group, replace `--subscription <subscription_id>` with `--management-group <mgName>`
+Create a Policy definition with New-AzPolicyDefinition for virtual networks tagged as **Prod**. Replace *<subscription_id>* with the subscription you want to apply this policy to. If you want to apply it to a management group, replace `Subscription = <subscription_id>` with `ManagementGroup = <mgName>`
+
+Define the conditional statement and store it in a variable.
+> [!NOTE]
+> It is recommended to scope all of your conditionals to only scan for type `Microsoft.Network/virtualNetwork` for efficiency.
 
 ```azurecli
-az policy definition create \
-    --name "ProdVNets" \
-    --description "Choose Prod virtual networks only" \
-    --rules "{\"if\":{\"allOf\":[{\"field\":\"Name\",\"contains\":\"VNet\"},{\"field\":\"tags['NetworkType']\",\"equals\":\"Prod\"}]},\"then\":{\"effect\":\"addToNetworkGroup\",\"details\":{\"networkGroupId\":\"/subscriptions/<subscription_id>/resourceGroups/myAVNMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/networkGroups/myNetworkGroup\"}}}" \
-    --subscription <subscription_id> \
-    --mode "Microsoft.Network.Data"
+$conditionalMembership = '{ 
+    "allof":[
+        { 
+        "field": "type", 
+        "equals": "Microsoft.Network/virtualNetwork" 
+        }
+        { 
+        "field": "name", 
+        "contains": "VNet" 
+        } 
+	{
+	"field": "tags[''NetworkType'']",
+	"equals": "Prod"
+	}
+    ] 
+}' 
+```
+Create the policy definition.
 
+```azurecli
+$defn = @{
+    Name = 'ProdVNets'
+    Mode = 'Microsoft.Network.Data'
+    Policy = $conditionalMembership
+    Subscription = <subscription>
+}
+    
+$policyDefinition = New-AzPolicyDefinition $defn  
 ```
 ### Apply a Policy definition
 
-Once a policy is defined, it must also be applied with [az policy assignment create](/cli/azure/policy/assignment#az-policy-assignment-create). Replace *<subscription_id>* with the subscription you want to apply this policy to. If you want to apply it to a management group, replace `--scope "/subscriptions/<subscription_id>"` with `--scope "/providers/Microsoft.Management/managementGroups/<mgName>`, and replace *<mgName\>* with your management group.
+Once a policy is defined, it must also be applied with New-AzPolicyAssignment. Replace *<subscription_id>* with the subscription you want to apply this policy to. If you want to apply it to a management group, replace `Scope = "/subscriptions/<subscription_id>"` with `Scope = "/providers/Microsoft.Management/managementGroups/<mgName>`, and replace *<mgName\>* with your management group.
 
-```azurecli
+```azurepowershell-interactive
+$assgn = @{
+Name = 'ProdVNets'
+Description = 'Take only virtual networks tagged NetworkType:Prod'
+PolicyDefinition  = $policyDefinition
+Scope = "/providers/Microsoft.Management/managementGroups/{mgName}"
+}
 
-
-az policy assignment create \
-    --name "ProdVNets" \
-    --description "Take only virtual networks tagged NetworkType:Prod" \
-    --scope "/subscriptions/<subscription_id>" \
-    --policy "/subscriptions/<subscription_id>/providers/Microsoft.Authorization/policyDefinitions/ProdVNets"
+$policyAssignment = New-AzPolicyAssignment $assgn
 ```
 
 ## Create a configuration
 
 Now that the Network Group is created, and has the correct VNets, create a mesh network topology configuration with [az network manager connect-config create](/cli/azure/network/manager/connect-config#az-network-manager-connect-config-create). Replace <subscription_id> with your subscription.
 
-```azurecli
-az network manager connect-config create \
-    --configuration-name "connectivityconfig" \
-    --description "Production Mesh Connectivity Config Example" \
-    --applies-to-groups network-group-id="/subscriptions/<subscription_id>/resourceGroups/myAVNMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/networkGroups/myNetworkGroup" \
-    --connectivity-topology "Mesh" \
-    --network-manager-name "myAVNM" \
-    --resource-group "myAVNMResourceGroup"
+Create a connectivity group item to add a network group to with New-AzNetworkManagerConnectivityGroupItem.
+
+```azurepowershell-interactive
+$gi = @{
+NetworkGroupId = $networkgroup.Id
+}
+$groupItem = New-AzNetworkManagerConnectivityGroupItem @gi
 ```
+
+Create a configuration group and add the group item from the previous step.
+
+```azurepowershell-interactive
+$configGroup = @()
+$configGroup.Add($groupItem)
+```
+Create the connectivity configuration with New-AzNetworkManagerConnectivityConfiguration.
+
+```azurepowershell-interactive
+$config = @{
+Name = 'connectivityconfig'
+ResourceGroupName = $rg.Name
+NetworkManagerName = $networkManager.Name
+ConnectivityTopology = 'Mesh'
+AppliesToGroup = $configGroup
+}
+$connectivityconfig = New-AzNetworkManagerConnectivityConfiguration @config
+```   
 ## Commit deployment
 
-For the configuration to take effect, commit the configuration to the target regions with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit):
+For the configuration to take effect, commit the configuration to the target regions with Deploy-AzNetworkManagerCommit.
 
-```azurecli
-#Currently broken - can only do via portal
-az network manager post-commit \
-    --network-manager-name "myAVNM" \
-    --commit-type "Connectivity" \
-    --configuration-ids "/subscriptions/<subscription_id>/resourceGroups/myANVMResourceGroup/providers/Microsoft.Network/networkManagers/myAVNM/connectivityConfigurations/connectivityconfig" \
-    --target-locations "westus" \
-    --resource-group "myAVNMResourceGroup"
+```azurepowershell-interactive
+[System.Collections.Generic.List[string]]$configIds = @()  
+$configIds.add($connectivityconfig.id) 
+[System.Collections.Generic.List[string]]$target = @()   
+$target.Add("westus")     
+
+$deployment = @{
+    Name = $networkManager.Name
+    ResourceGroupName = $rg.Name
+    ConfigurationId = $configIds
+    TargetLocation = $target
+    CommitType = 'Connectivity'
+}
+Deploy-AzNetworkManagerCommit @deployment 
 ```
+
 ## Verify configuration
 Virtual Networks will display configurations applied to them with [az network manager list-effective-connectivity-config](/cli/azure/network/manager#az-network-manager-list-effective-connectivity-config):
 
 ```azurecli
-az network manager list-effective-connectivity-config \
-    --resource-group "myAVNMResourceGroup" \
-    --virtual-network-name "VNetA"
-
-az network manager list-effective-connectivity-config \
-    --resource-group "myAVNMResourceGroup" \
-    --virtual-network-name "VNetB"
-
-
-az network manager list-effective-connectivity-config \
-    --resource-group "myAVNMResourceGroup" \
-    --virtual-network-name "VNetC"
-
-az network manager list-effective-connectivity-config \
-    --resource-group "myAVNMResourceGroup" \
-    --virtual-network-name "VNetD"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName $rg.Name -VirtualNetworkName "VNetA"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName $rg.Name -VirtualNetworkName "VNetB"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName $rg.Name -VirtualNetworkName "VNetC"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName $rg.Name -VirtualNetworkName "VNetD"
+Get-AzNetworkManagerEffectiveConnectivityConfigurationList -ResourceGroupName $rg.Name -VirtualNetworkName "VNetE"
 ```
 For the virtual networks that are part of the connectivity configuration, you'll see an output similar to this:
 
@@ -347,12 +389,12 @@ For the virtual networks that are part of the connectivity configuration, you'll
 For virtual networks not part of the network group like **VNetD**, you'll see an output similar to this:
 
 ```json
-az network manager list-effective-connectivity-config     --resource-group "myAVNMResourceGroup"     --virtual-network-name "VNetD-test"
 {
   "skipToken": "",
   "value": []
 }
 ```
+
 ## Clean up resources
 
 If you no longer need the Azure Virtual Network Manager, you'll need to make sure all of following are true before you can delete the resource:
@@ -361,48 +403,63 @@ If you no longer need the Azure Virtual Network Manager, you'll need to make sur
 * All configurations have been deleted.
 * All network groups have been deleted.
 
-1. Remove the connectivity deployment by committing no configurations with [az network manager post-commit](/cli/azure/network/manager#az-network-manager-post-commit):
+1. Remove the connectivity deployment by deploying an empty configuration with Deploy-AzNetworkManagerCommit.
 
-    ```azurecli
-    az network manager post-commit \
-        --network-manager-name "myAVNM" \
-        --commit-type "Connectivity" \
-        --target-locations "westus" \
-        --resource-group "myAVNMResourceGroup"
-    ```
+```azurepowershell-interactive
+[System.Collections.Generic.List[string]]$configIds = @()
+[System.Collections.Generic.List[string]]$target = @()   
+$target.Add("westus")     
+$removedeployment = @{
+Name = 'myAVNM'
+ResourceGroupName = 'myAVNMResourceGroup'
+ConfigurationId = $configIds
+Target = $target
+CommitType = 'Connectivity'
+}
+Deploy-AzNetworkManagerCommit @removedeployment
+```
 
-1. Remove the connectivity configuration with [az network manager connect-config delete](/cli/azure/network/manager/connect-config#az-network-manager-connect-config-delete):
+1. Remove the connectivity configuration with Remove-AzNetworkManagerConnectivityConfiguration
 
-    ```azurecli
-    az network manager connect-config delete \
-        --configuration-name "connectivityconfig" \
-        --name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
-    ```
+```azurepowershell-interactive
 
-1. Remove the network group with [az network manager group delete](/cli/azure/network/manager/group#az-network-manager-group-delete):
+Remove-AzNetworkManagerConnectivityConfiguration @connectivityconfig.Id   
 
-    ```azurecli
-    az network manager group delete \
-        --name "myNetworkGroup" \
-        --network-manager-name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
-    ```
+```
+2. Remove the policy resources with Remove-AzPolicy.
 
-1. Delete the network manager instance with [az network manager delete](/cli/azure/network/manager#az-network-manager-delete):
+```azurepowershell-interactive
 
-    ```azurecli
-    az network manager delete \
-        --name "myAVNM" \
-        --resource-group "myAVNMResourceGroup"
-    ```
+Remove-AzPolicyAssignment $policyAssignment.Id
+Remove-AzPolicyAssignment $policyDefinition.Id
 
-1. If you no longer need the resource created, delete the resource group with [az group delete](/cli/azure/group#az-group-delete):
+```
 
-    ```azurecli
-    az group delete \
-        --name "myAVNMResourceGroup"
-    ```
+3. Remove the network group with Remove-AzNetworkManagerGroup.
+
+```azurepowershell-interactive
+Remove-AzNetworkManagerGroup $networkGroup.Id
+```
+
+4. Delete the network manager instance with Remove-AzNetworkManager.
+
+```azurepowershell-interactive
+Remove-AzNetworkManager $networkManager.Id
+```
+
+```azurepowershell-interactive
+RemoveAzVirtualNetwork -Name VNetA -ResourceGroupName $rg.Name
+RemoveAzVirtualNetwork -Name VNetB -ResourceGroupName $rg.Name
+RemoveAzVirtualNetwork -Name VNetC -ResourceGroupName $rg.Name
+RemoveAzVirtualNetwork -Name VNetD -ResourceGroupName $rg.Name
+RemoveAzVirtualNetwork -Name VNetE -ResourceGroupName $rg.Name
+```
+
+6. If you no longer need any resources under the group the network manager belongs to, delete the resource group with [Remove-AzResourceGroup](/powershell/module/az.resources/remove-azresourcegroup).
+
+```azurepowershell-interactive
+Remove-AzResourceGroup -Name $rg.Name
+```
 
 ## Next steps
 
