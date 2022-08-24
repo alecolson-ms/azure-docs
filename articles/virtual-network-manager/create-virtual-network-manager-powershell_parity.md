@@ -446,6 +446,7 @@ Remove-AzNetworkManagerGroup $networkGroup.Id
 ```azurepowershell-interactive
 Remove-AzNetworkManager $networkManager.Id
 ```
+5. Remove the virtual networks created with Remove-AzVirtualNetwork.
 
 ```azurepowershell-interactive
 RemoveAzVirtualNetwork -Name VNetA -ResourceGroupName $rg.Name
