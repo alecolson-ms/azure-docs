@@ -6,13 +6,13 @@ ms.author: mbender
 ms.service: virtual-network-manager
 ms.topic: quickstart
 ms.date: 08/24/2022
-ms.custom: mode-api, devx-track-azurecli 
+ms.custom: mode-api, devx-track-azurepowershell
 ms.devlang: azurepowershell
 ---
 
-# Quickstart: Create a mesh network topology with Azure Virtual Network Manager via the Azure CLI
+# Quickstart: Create a mesh network topology with Azure Virtual Network Manager via the Azure Powershell
 
-Get started with Azure Virtual Network Manager by using the Azure CLI to manage connectivity for all your virtual networks.
+Get started with Azure Virtual Network Manager by using the Azure Powershell to manage connectivity for all your virtual networks.
 
 In this quickstart, you'll deploy three virtual networks and use Azure Virtual Network Manager to create a mesh network topology. Then you'll verify if the connectivity configuration got applied.
 
@@ -42,7 +42,7 @@ Install the latest *Az.Network* Azure PowerShell module using this command:
 
 Select the subscription where network manager will be deployed.
 
-```azurecli-interactive
+```azurepowershell-interactive
 SetAzContext --subscription "<subscription id>"
 ```
 
@@ -50,7 +50,7 @@ SetAzContext --subscription "<subscription id>"
 
 Before you can deploy Azure Virtual Network Manager, you have to create a resource group to host a network manager with New-AzResourceGroup. This example creates a resource group named **myAVNMResourceGroup** in the **westus** location:
 
-```azurecli-interactive
+```azurepowershell-interactive
 $location = "West US"
 $rg = @{
     Name = 'myAVNMResourceGroup'
@@ -63,7 +63,7 @@ New-AzResourceGroup @rg
 
 Define the scope and access type this Network Manager instance will have. Create the scope with New-AzNetworkManagerScope. Replace the value  *<subscription_id>* with the subscription you want Virtual Network Manager to manage virtual networks for. For management groups, replace *<mgName\>* with the management group to manage.
 
-```azurecli-interactive
+```azurepowershell-interactive
 Import-Module -Name Az.Network -RequiredVersion "4.20.0"
 
 [System.Collections.Generic.List[string]]$subGroup = @()  
@@ -80,7 +80,7 @@ $scope = New-AzNetworkManagerScope -Subscription $subGroup -ManagementGroup $mgG
 
 Create the Virtual Network Manager with New-AzNetworkManager.
 
-```azurecli-interactive
+```azurepowershell-interactive
 $avnm = @{
     Name = 'myAVNM'
     ResourceGroupName = $rg.Name
