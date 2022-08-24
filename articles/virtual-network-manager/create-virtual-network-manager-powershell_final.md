@@ -183,7 +183,7 @@ $subnetB = @{
     VirtualNetwork = $virtualNetworkB
     AddressPrefix = '10.1.0.0/24'
 }
-$subnetConfigC = Add-AzVirtualNetworkSubnetConfig @subnetB
+$subnetConfigB = Add-AzVirtualNetworkSubnetConfig @subnetB
 $virtualnetworkB | Set-AzVirtualNetwork
 
 $subnetC = @{
